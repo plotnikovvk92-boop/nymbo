@@ -50,6 +50,10 @@ from sqlite_fsm import SQLiteStorage, SQLiteEventIsolation
 dp = Dispatcher(storage=SQLiteStorage(), events_isolation=SQLiteEventIsolation())
 reminder_task = None
 recovery_task = None
+network_startup_task = None
+webhook_status = "unverified"
+TELEGRAM_STARTUP_TIMEOUT_SECONDS = 5
+TELEGRAM_STARTUP_RETRY_SECONDS = 30
 
 DAY_LABELS = ["🌅 Завтрак", "🍎 Перекус", "☀️ Обед", "🍏 Перекус", "🌙 Ужин"]
 PLAN_DAYS = 30
@@ -1699,22 +1703,79 @@ def validate_runtime_config(webhook_mode: bool = False):
             raise RuntimeError("Не заполнен OPERATOR_EMAIL.")
 
 
-async def on_startup(**_):
-    global reminder_task, recovery_task
-    validate_runtime_config(webhook_mode=True)
-    info = await bot.get_webhook_info()
+async def check_configured_webhook():
+    """A network outage is unknown state; an API-confirmed mismatch is fatal."""
+    global webhook_status
+    try:
+        info = await asyncio.wait_for(
+            bot.get_webhook_info(request_timeout=TELEGRAM_STARTUP_TIMEOUT_SECONDS),
+            timeout=TELEGRAM_STARTUP_TIMEOUT_SECONDS,
+        )
+    except (TelegramNetworkError, asyncio.TimeoutError):
+        logging.warning("Telegram webhook verification deferred: temporary network failure")
+        return False
     expected = WEBHOOK_URL.rstrip("/") + WEBHOOK_PATH
     if info.url != expected:
+        webhook_status = "mismatch"
         raise RuntimeError("Telegram webhook не соответствует этому приложению. Автоматическое переключение запрещено.")
+    webhook_status = "verified"
+    return True
+
+
+def get_webhook_status():
+    return webhook_status
+
+
+async def complete_network_startup():
+    """Retry GET and navigation registration; never set or delete a webhook."""
+    while True:
+        try:
+            if webhook_status != "verified" and not await check_configured_webhook():
+                await asyncio.sleep(TELEGRAM_STARTUP_RETRY_SECONDS)
+                continue
+            await asyncio.wait_for(configure_bot_navigation(),
+                                   timeout=TELEGRAM_STARTUP_TIMEOUT_SECONDS)
+            logging.info("Telegram webhook verified and navigation configured")
+            return
+        except (TelegramNetworkError, asyncio.TimeoutError):
+            logging.warning("Telegram navigation setup deferred: temporary network failure")
+            await asyncio.sleep(TELEGRAM_STARTUP_RETRY_SECONDS)
+        except RuntimeError:
+            if webhook_status != "mismatch":
+                raise
+            # A confirmed foreign/absent webhook must stop processing, not be replaced.
+            tasks = [task for task in (reminder_task, recovery_task) if task]
+            for task in tasks:
+                if task:
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            logging.error("Telegram webhook mismatch: request processing blocked")
+            return
+        except Exception:
+            # Optional navigation must not take the bot down; no exception URLs in logs.
+            logging.error("Telegram navigation setup failed; existing commands retained")
+            return
+
+
+async def on_startup(**_):
+    global reminder_task, recovery_task, network_startup_task, webhook_status
+    validate_runtime_config(webhook_mode=True)
+    webhook_status = "unverified"
+    await check_configured_webhook()
     await init_db()
-    await configure_bot_navigation()
     reminder_task = asyncio.create_task(purchase_reminder_loop())
     recovery_task = asyncio.create_task(payment_recovery_loop())
-    logging.info("Configured webhook verified; no changes made")
+    network_startup_task = asyncio.create_task(complete_network_startup())
+    logging.info("Application initialized; no webhook changes made")
 
 
 async def on_shutdown(**_):
-    global reminder_task, recovery_task
+    global reminder_task, recovery_task, network_startup_task
+    if network_startup_task:
+        network_startup_task.cancel()
+        try: await network_startup_task
+        except asyncio.CancelledError: pass
+        network_startup_task = None
     if recovery_task:
         recovery_task.cancel()
         try: await recovery_task

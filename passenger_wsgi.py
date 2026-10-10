@@ -16,7 +16,7 @@ APP_DIR = "/home/p/plotnixu/plotnixu.beget.tech/gymochka_app"
 if APP_DIR not in sys.path:
     sys.path.insert(0, APP_DIR)
 
-from bot import bot, dp, on_startup, on_shutdown, process_yookassa_success
+from bot import bot, dp, on_startup, on_shutdown, process_yookassa_success, get_webhook_status
 from config import WEBHOOK_PATH, WEBHOOK_SECRET_TOKEN, YOOKASSA_WEBHOOK_PATH
 
 _LOOP = None
@@ -87,6 +87,8 @@ def application(environ, start_response):
             try: payload=_body(environ)
             except (ValueError,KeyError,UnicodeError): return _json_response(start_response,'400 Bad Request',{'ok':False})
             _ensure_started()
+            if get_webhook_status() == 'mismatch':
+                return _json_response(start_response,'503 Service Unavailable',{'ok':False,'error':'webhook_mismatch'})
             if path == WEBHOOK_PATH:
                 _submit(dp.feed_raw_update(bot,payload))
             elif payload.get('type') == 'notification' and payload.get('event') == 'payment.succeeded':
@@ -97,13 +99,16 @@ def application(environ, start_response):
             return _json_response(start_response,'200 OK',{'ok':True})
         if path == '/health':
             _ensure_started()
-            return _json_response(start_response,'200 OK',{'ok':True,'service':'nyambo'})
+            state = get_webhook_status()
+            if state == 'mismatch':
+                return _json_response(start_response,'503 Service Unavailable',{'ok':False,'error':'webhook_mismatch'})
+            return _json_response(start_response,'200 OK',{'ok':True,'service':'nyambo','telegram_webhook':state})
         if path == '/payment/return':
             # Deliberately no initialization, API call or DB write on a redirect.
             data='Вернитесь в Telegram и нажмите «Проверить оплату» или /start. Доступ выдаётся только после проверки платежа через API ЮKassa.\n'.encode('utf-8')
             start_response('200 OK',[('Content-Type','text/plain; charset=utf-8'),('Content-Length',str(len(data)))])
             return [data]
         return _json_response(start_response,'404 Not Found',{'ok':False})
-    except Exception:
-        print('NYAMBO_REQUEST_ERROR',file=sys.stderr)  # Never dump request data/URLs/credentials.
+    except Exception as error:
+        print('NYAMBO_REQUEST_ERROR type='+type(error).__name__,file=sys.stderr)
         return _json_response(start_response,'500 Internal Server Error',{'ok':False,'error':'temporary_error'})

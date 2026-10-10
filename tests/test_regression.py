@@ -7,8 +7,10 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
+import time
 import unittest
 from datetime import date, timedelta, datetime, timezone
 from types import SimpleNamespace
@@ -370,7 +372,11 @@ class NutritionCase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             out=str(Path(d)/'plan.pdf');generate_pdf({'target_kcal':1900,'plan_json':json.dumps(plan,ensure_ascii=False),'shopping_json':json.dumps(shopping,ensure_ascii=False)},out)
             self.assertTrue(Path(out).read_bytes().startswith(b'%PDF-'))
-            text=subprocess.check_output(['pdftotext',out,'-']).decode()
+            if shutil.which('pdftotext') and os.getenv('NYAMBO_PDF_EXTRACTOR') != 'pypdf':
+                text=subprocess.check_output(['pdftotext',out,'-']).decode()
+            else:
+                from pypdf import PdfReader
+                text='\n'.join(page.extract_text() or '' for page in PdfReader(out).pages)
             for word in ('Информационный','Меню','покупок','10.10.2026','15.10.2026','1900'):
                 self.assertIn(word,text)
 
@@ -465,6 +471,7 @@ class RuntimeCase(unittest.IsolatedAsyncioTestCase):
         async def process(pid):
             await asyncio.sleep(.025);seen.append(pid)
         w.on_startup=startup;w.on_shutdown=AsyncMock();w.process_yookassa_success=process
+        w.get_webhook_status=lambda:'verified'
         def request(path='/yookassa/webhook',data=None,secret=None):
             data=json.dumps(data or {'type':'notification','event':'payment.succeeded','object':{'id':'payment-a'}}).encode()
             env={'PATH_INFO':path,'REQUEST_METHOD':'POST','CONTENT_LENGTH':str(len(data)),'wsgi.input':io.BytesIO(data)}
@@ -488,9 +495,93 @@ class RuntimeCase(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn('setWebhook',[x.__api_method__ for x in fake.calls]);self.assertNotIn('deleteWebhook',[x.__api_method__ for x in fake.calls])
             finally:app.bot.session=old
 
+    async def test_passenger_timeout_health_and_authenticated_update(self):
+        spec=importlib.util.spec_from_file_location('passenger_timeout_test',ROOT/'passenger_wsgi.py')
+        w=importlib.util.module_from_spec(spec);spec.loader.exec_module(w)
+        fake=FakeSession();old=app.bot.session;app.bot.session=fake
+        async def hung_request(**kwargs):await asyncio.Event().wait()
+        def request(path,secret=None):
+            update={'update_id':1000,'message':{'message_id':1000,'date':int(time.time()),'chat':{'id':101,'type':'private'},'from':{'id':101,'is_bot':False,'first_name':'Test'},'text':'/start','entities':[{'type':'bot_command','offset':0,'length':6}]}}
+            body=json.dumps(update).encode()
+            env={'PATH_INFO':path,'REQUEST_METHOD':'GET' if path=='/health' else 'POST','CONTENT_LENGTH':str(len(body)),'wsgi.input':io.BytesIO(body)}
+            if secret:env['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN']=secret
+            status=[];out=w.application(env,lambda st,headers:status.append(st));return status[0],json.loads(b''.join(out))
+        with patch.object(app,'validate_runtime_config'),patch.object(app,'TELEGRAM_STARTUP_TIMEOUT_SECONDS',.02),patch.object(app.bot,'get_webhook_info',side_effect=hung_request),patch.object(app,'configure_bot_navigation',AsyncMock()):
+            try:
+                status,body=await asyncio.wait_for(asyncio.to_thread(request,'/health'),timeout=1)
+                self.assertEqual(status,'200 OK');self.assertEqual(body['telegram_webhook'],'unverified')
+                self.assertEqual((await asyncio.to_thread(request,'/webhook','wrong-secret'))[0],'403 Forbidden')
+                self.assertEqual((await asyncio.to_thread(request,'/webhook',config.WEBHOOK_SECRET_TOKEN))[0],'200 OK')
+                self.assertTrue(any(m.__api_method__=='sendMessage' for m in fake.calls))
+                with patch.object(w,'get_webhook_status',return_value='mismatch'):
+                    before=len(fake.calls)
+                    self.assertEqual((await asyncio.to_thread(request,'/webhook',config.WEBHOOK_SECRET_TOKEN))[0],'503 Service Unavailable')
+                    self.assertEqual((await asyncio.to_thread(request,'/health'))[0],'503 Service Unavailable')
+                    self.assertEqual(len(fake.calls),before)
+                self.assertNotIn('setWebhook',[m.__api_method__ for m in fake.calls]);self.assertNotIn('deleteWebhook',[m.__api_method__ for m in fake.calls])
+            finally:
+                await asyncio.to_thread(w._close);app.bot.session=old
+
     async def test_startup_wrong_webhook_rejected_no_change(self):
         with patch.object(app,'validate_runtime_config'),patch.object(app,'configure_bot_navigation',AsyncMock()),patch.object(app.bot,'get_webhook_info',AsyncMock(return_value=SimpleNamespace(url='https://other.example/webhook'))):
             with self.assertRaises(RuntimeError):await app.on_startup()
+
+    async def test_startup_network_timeout_does_not_block_authenticated_start(self):
+        from aiogram.types import Update
+        fake=FakeSession();old=app.bot.session;app.bot.session=fake
+        async def hung_request(**kwargs):await asyncio.Event().wait()
+        navigation=AsyncMock()
+        with patch.object(app,'validate_runtime_config'),patch.object(app,'TELEGRAM_STARTUP_TIMEOUT_SECONDS',.02),patch.object(app.bot,'get_webhook_info',side_effect=hung_request),patch.object(app,'configure_bot_navigation',navigation):
+            try:
+                await asyncio.wait_for(app.on_startup(),timeout=.8)
+                self.assertEqual(app.get_webhook_status(),'unverified')
+                navigation.assert_not_awaited()
+                # Startup failure used to prevent this real /start dispatcher request.
+                update=Update.model_validate({'update_id':999,'message':{'message_id':999,'date':int(time.time()),'chat':{'id':101,'type':'private'},'from':{'id':101,'is_bot':False,'first_name':'Test'},'text':'/start','entities':[{'type':'bot_command','offset':0,'length':6}]}})
+                await app.dp.feed_update(app.bot,update)
+                self.assertTrue(any(m.__api_method__=='sendMessage' for m in fake.calls))
+                self.assertNotIn('setWebhook',[m.__api_method__ for m in fake.calls])
+                self.assertNotIn('deleteWebhook',[m.__api_method__ for m in fake.calls])
+            finally:
+                await app.on_shutdown();app.bot.session=old
+
+    async def test_startup_network_recovers_and_navigation_retries(self):
+        from aiogram.exceptions import TelegramNetworkError
+        from aiogram.methods import GetWebhookInfo, SetMyCommands
+        check=AsyncMock(side_effect=[TelegramNetworkError(GetWebhookInfo(), 'temporary'),SimpleNamespace(url=config.WEBHOOK_URL+'/webhook')])
+        navigation=AsyncMock(side_effect=[TelegramNetworkError(SetMyCommands(commands=[]),'temporary'),None])
+        with patch.object(app,'validate_runtime_config'),patch.object(app.bot,'get_webhook_info',check),patch.object(app,'configure_bot_navigation',navigation),patch.object(app,'TELEGRAM_STARTUP_RETRY_SECONDS',.01):
+            try:
+                await app.on_startup()
+                await asyncio.wait_for(app.network_startup_task,timeout=1)
+                self.assertEqual(app.get_webhook_status(),'verified')
+                self.assertEqual(check.await_count,2);self.assertEqual(navigation.await_count,2)
+            finally:await app.on_shutdown()
+
+    async def test_startup_deferred_mismatch_blocks_and_stops_background_tasks(self):
+        from aiogram.exceptions import TelegramNetworkError
+        from aiogram.methods import GetWebhookInfo
+        check=AsyncMock(side_effect=[TelegramNetworkError(GetWebhookInfo(),'temporary'),SimpleNamespace(url='https://foreign.example/webhook')])
+        navigation=AsyncMock()
+        with patch.object(app,'validate_runtime_config'),patch.object(app.bot,'get_webhook_info',check),patch.object(app,'configure_bot_navigation',navigation):
+            try:
+                await app.on_startup()
+                await asyncio.wait_for(app.network_startup_task,timeout=1)
+                await asyncio.sleep(0)
+                self.assertEqual(app.get_webhook_status(),'mismatch')
+                self.assertTrue(app.reminder_task.done());self.assertTrue(app.recovery_task.done())
+                navigation.assert_not_awaited()
+            finally:await app.on_shutdown()
+
+    async def test_navigation_timeout_does_not_fail_startup(self):
+        async def hung_navigation():await asyncio.Event().wait()
+        with patch.object(app,'validate_runtime_config'),patch.object(app.bot,'get_webhook_info',AsyncMock(return_value=SimpleNamespace(url=config.WEBHOOK_URL+'/webhook'))),patch.object(app,'configure_bot_navigation',side_effect=hung_navigation),patch.object(app,'TELEGRAM_STARTUP_TIMEOUT_SECONDS',.02):
+            try:
+                await asyncio.wait_for(app.on_startup(),timeout=.8)
+                await asyncio.sleep(.05)
+                self.assertEqual(app.get_webhook_status(),'verified')
+                self.assertFalse(app.network_startup_task.done())
+            finally:await app.on_shutdown()
 
     async def test_multiple_processes_credit_only_once(self):
         await self.bind(pid="multiprocess-payment")
