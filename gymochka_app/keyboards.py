@@ -165,12 +165,10 @@ def plan_day_kb(index: int, total_days: int) -> InlineKeyboardMarkup:
 
 
 def pay_step_kb(price_rub: float, test_mode: bool) -> InlineKeyboardMarkup:
-    # Free bypass is exposed only in the confirmed test bot.
+    # Test bypass handler is retained for old test buttons, but no new button is shown.
     rows = [
         [InlineKeyboardButton(text=f"💳 Оплатить {price_rub:.0f} ₽", callback_data="pay_now")],
     ]
-    if test_mode:
-        rows.append([InlineKeyboardButton(text="🧪 Пропустить оплату (тест)", callback_data="skip_pay")])
     rows.append([InlineKeyboardButton(text="🔄 Проверить оплату", callback_data="check_payment")])
     rows.append([InlineKeyboardButton(text="📑 Публичная оферта", url=PUBLIC_OFFER_URL)] if PUBLIC_OFFER_URL else [InlineKeyboardButton(text="📑 Публичная оферта", callback_data="offer_doc")])
     rows.append(_support_row())

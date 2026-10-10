@@ -260,7 +260,7 @@ class DBCase(unittest.IsolatedAsyncioTestCase):
         with patch.object(app,'TEST_MODE',True):await app.skip_pay(cb,state)
         self.assertTrue(active_access(await db.get_user(101)));self.assertEqual(len(json.loads((await db.get_user(101))['plan_json'])),30)
         def buttons(test):return [b.callback_data for row in kb.pay_step_kb(89,test).inline_keyboard for b in row]
-        self.assertNotIn('skip_pay',buttons(False));self.assertIn('skip_pay',buttons(True))
+        self.assertNotIn('skip_pay',buttons(False));self.assertNotIn('skip_pay',buttons(True))
 
     async def test_reminder_cutoff_claim_once_and_fresh_activity(self):
         now=datetime.now(timezone.utc);cutoff=(now-timedelta(hours=2)).isoformat(timespec='seconds');old=(now-timedelta(hours=3)).isoformat(timespec='seconds')
