@@ -1,0 +1,6 @@
+new_purchase_keeps_old_plan: True
+duplicate_regrants_revoked_access: True
+live_accepts_test_payment_and_wrong_shop: True
+duplicate_confirmation_messages: 2
+known_payment_POST_calls: 1 GET_calls: 0
+canceled_intent_still_pending: pending

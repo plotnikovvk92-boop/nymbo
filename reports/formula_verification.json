@@ -1,0 +1,7 @@
+{
+  "harris_benedict_bmr": true,
+  "calc_tdee": true,
+  "calc_target": true,
+  "_scale_meal": true,
+  "meals_catalog_unchanged": true
+}

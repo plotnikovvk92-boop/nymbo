@@ -1,0 +1,121 @@
+test_active_access_blocks_checkout (__main__.DBCase) ... ok
+test_ambiguous_telegram_timeout_no_auto_duplicate (__main__.DBCase) ... WARNING:root:Payment notification delivery unknown; access retained
+ok
+test_atomic_credit_rolls_back_on_sql_failure (__main__.DBCase) ... ok
+test_background_recovers_missed_webhook (__main__.DBCase) ... ok
+test_cancel_then_new_checkout_key (__main__.DBCase) ... ok
+test_cross_user_isolation (__main__.DBCase) ... ok
+test_duplicate_after_delete_and_reregistration (__main__.DBCase) ... ok
+test_duplicate_after_expiry_does_not_extend (__main__.DBCase) ... ok
+test_duplicate_after_manual_revoke_no_resurrection (__main__.DBCase) ... ok
+test_fsm_parallel_event_isolation (__main__.DBCase) ... ok
+test_fsm_restart_isolation_and_delete (__main__.DBCase) ... ok
+test_known_checkout_get_only (__main__.DBCase) ... ok
+test_live_skip_denied_test_skip_preserved (__main__.DBCase) ... ok
+test_lost_response_replay_payload_survives_config_change (__main__.DBCase) ... ok
+test_manual_grant_revoke_created_at_preserved (__main__.DBCase) ... ok
+test_menu_recovers_missed_webhook_and_plan (__main__.DBCase) ... ok
+test_message_failure_recovers_without_credit_repeat (__main__.DBCase) ... ok
+test_new_purchase_clears_demo_and_old_menu (__main__.DBCase) ... ok
+test_no_reminder_after_payment_grant_or_optout (__main__.DBCase) ... ok
+test_old_expired_buttons_and_deleted_profile (__main__.DBCase) ... WARNING:asyncio:Executing <Task pending name='Task-69' coro=<IsolatedAsyncioTestCase._asyncioLoopRunner() running at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/unittest/async_case.py:101> wait_for=<Future pending cb=[Task.task_wakeup()] created at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/asyncio/base_events.py:429> created at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/unittest/async_case.py:117> took 0.118 seconds
+ok
+test_old_unknown_checkout_blocks_post_after_24h (__main__.DBCase) ... ok
+test_parallel_intent_same_key (__main__.DBCase) ... ok
+test_parallel_replay_single_credit_and_message (__main__.DBCase) ... ok
+test_pending_cancel_no_credit (__main__.DBCase) ... ok
+test_plan_failure_preserves_access_then_recovers (__main__.DBCase) ... ok
+test_recalc_invalidates_old_plan_and_cas (__main__.DBCase) ... ok
+test_reminder_cutoff_claim_once_and_fresh_activity (__main__.DBCase) ... ok
+test_repurchase_after_expiry_new_id_current_menu (__main__.DBCase) ... ok
+test_revocation_blocks_inflight_plan_save (__main__.DBCase) ... ok
+test_same_payment_wrong_owner_rejected (__main__.DBCase) ... ok
+test_timeout_lost_response_webhook_order_key (__main__.DBCase) ... ok
+test_timeout_retry_same_key (__main__.DBCase) ... WARNING:root:Payment checkout deferred
+ok
+test_unauthorized_admin_buttons_no_change (__main__.DBCase) ... ok
+test_unknown_order_not_credited (__main__.DBCase) ... ok
+test_unprocessed_old_payment_after_manual_grant_rejected (__main__.DBCase) ... ok
+test_unprocessed_old_payment_after_revoke_rejected (__main__.DBCase) ... ok
+test_wrong_order_key_rejected (__main__.DBCase) ... ok
+test_access_calendar_boundaries (__main__.NutritionCase) ... ok
+test_exclusion_combinations_0_1_2_5_8_9 (__main__.NutritionCase) ... ok
+test_original_formula_unchanged (__main__.NutritionCase) ... ok
+test_pdf_cyrillic_current_plan (__main__.NutritionCase) ... ok
+test_shopping_sums_normalized_from_actual_portions (__main__.NutritionCase) ... ok
+test_single_day_recipes_button (__main__.NutritionCase) ... ok
+test_redirect_create_get_idempotence_contract (__main__.ProviderHTTPCase) ... INFO:asyncio:<Server sockets=(<asyncio.TransportSocket fd=6, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('127.0.0.1', 34847)>,)> is serving
+/workspace/nyambo-audit/fixed/gymochka_app/payment_service.py:18: DeprecationWarning: BasicAuth is deprecated and will be removed in aiohttp 4.0; use aiohttp.encode_basic_auth() with headers={'Authorization': ...} instead
+  return BasicAuth(YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY)
+/workspace/nyambo-audit/fixed/gymochka_app/payment_service.py:46: DeprecationWarning: The 'auth' parameter is deprecated and will be removed in v4; pass headers={'Authorization': aiohttp.encode_basic_auth(login, password)} instead
+  async with ClientSession(timeout=timeout, auth=_auth()) as session:
+INFO:aiohttp.access:127.0.0.1 [10/Oct/2026:13:25:17 +0000] "POST /payments HTTP/1.1" 200 459 "-" "Python/3.10 aiohttp/3.14.3"
+INFO:aiohttp.access:127.0.0.1 [10/Oct/2026:13:25:17 +0000] "POST /payments HTTP/1.1" 200 459 "-" "Python/3.10 aiohttp/3.14.3"
+/workspace/nyambo-audit/fixed/gymochka_app/payment_service.py:63: DeprecationWarning: The 'auth' parameter is deprecated and will be removed in v4; pass headers={'Authorization': aiohttp.encode_basic_auth(login, password)} instead
+  async with ClientSession(timeout=timeout, auth=_auth()) as session:
+INFO:aiohttp.access:127.0.0.1 [10/Oct/2026:13:25:17 +0000] "GET /payments/payment-a HTTP/1.1" 200 460 "-" "Python/3.10 aiohttp/3.14.3"
+ok
+test_wal_backup_install_rollback_preserves_env_and_db (__main__.ReleaseCase) ... ok
+test_legacy_migration_preserves_sensitive_fields_and_registration (__main__.RuntimeCase) ... ok
+test_multiple_processes_credit_only_once (__main__.RuntimeCase) ... INFO:asyncio:execute program '/workspace/nyambo-audit/venv310/bin/python': <_UnixSubprocessTransport pid=13886 running stdout=<_UnixReadPipeTransport fd=6 polling> stderr=<_UnixReadPipeTransport fd=8 polling>>
+INFO:asyncio:execute program '/workspace/nyambo-audit/venv310/bin/python': <_UnixSubprocessTransport pid=13888 running stdout=<_UnixReadPipeTransport fd=7 polling> stderr=<_UnixReadPipeTransport fd=10 polling>>
+INFO:asyncio:execute program '/workspace/nyambo-audit/venv310/bin/python': <_UnixSubprocessTransport pid=13890 running stdout=<_UnixReadPipeTransport fd=9 polling> stderr=<_UnixReadPipeTransport fd=12 polling>>
+INFO:asyncio:execute program '/workspace/nyambo-audit/venv310/bin/python': <_UnixSubprocessTransport pid=13892 running stdout=<_UnixReadPipeTransport fd=11 polling> stderr=<_UnixReadPipeTransport fd=14 polling>>
+INFO:asyncio:<_UnixReadPipeTransport fd=14 polling> was closed by peer
+INFO:asyncio:<_UnixReadPipeTransport fd=11 polling> was closed by peer
+INFO:asyncio:<_UnixReadPipeTransport fd=10 polling> was closed by peer
+INFO:asyncio:<_UnixReadPipeTransport fd=7 polling> was closed by peer
+INFO:asyncio:<_UnixSubprocessTransport pid=13892 running stdout=<_UnixReadPipeTransport closed fd=11 closed> stderr=<_UnixReadPipeTransport closed fd=14 closed>> exited with return code 0
+INFO:asyncio:<_UnixSubprocessTransport pid=13888 running stdout=<_UnixReadPipeTransport closed fd=7 closed> stderr=<_UnixReadPipeTransport closed fd=10 closed>> exited with return code 0
+INFO:asyncio:<_UnixReadPipeTransport fd=12 polling> was closed by peer
+INFO:asyncio:<_UnixReadPipeTransport fd=9 polling> was closed by peer
+INFO:asyncio:<_UnixSubprocessTransport pid=13890 running stdout=<_UnixReadPipeTransport closed fd=9 closed> stderr=<_UnixReadPipeTransport closed fd=12 closed>> exited with return code 0
+INFO:asyncio:<_UnixReadPipeTransport fd=8 polling> was closed by peer
+INFO:asyncio:<_UnixReadPipeTransport fd=6 polling> was closed by peer
+INFO:asyncio:<_UnixSubprocessTransport pid=13886 running stdout=<_UnixReadPipeTransport closed fd=6 closed> stderr=<_UnixReadPipeTransport closed fd=8 closed>> exited with return code 0
+ok
+test_passenger_concurrent_requests_loop_runs_in_idle (__main__.RuntimeCase) ... ok
+test_real_dispatcher_survey_payment_menu_recipes_shopping_pdf (__main__.RuntimeCase) ... INFO:aiogram.event:Update id=1 is handled. Duration 13 ms by bot id=123456
+INFO:aiogram.event:Update id=2 is handled. Duration 14 ms by bot id=123456
+INFO:aiogram.event:Update id=3 is handled. Duration 13 ms by bot id=123456
+INFO:aiogram.event:Update id=4 is handled. Duration 21 ms by bot id=123456
+INFO:aiogram.event:Update id=5 is handled. Duration 15 ms by bot id=123456
+INFO:aiogram.event:Update id=6 is handled. Duration 14 ms by bot id=123456
+INFO:aiogram.event:Update id=7 is handled. Duration 15 ms by bot id=123456
+INFO:aiogram.event:Update id=8 is handled. Duration 17 ms by bot id=123456
+INFO:aiogram.event:Update id=9 is handled. Duration 17 ms by bot id=123456
+INFO:aiogram.event:Update id=10 is handled. Duration 17 ms by bot id=123456
+INFO:aiogram.event:Update id=11 is handled. Duration 17 ms by bot id=123456
+INFO:aiogram.event:Update id=12 is handled. Duration 31 ms by bot id=123456
+INFO:aiogram.event:Update id=13 is handled. Duration 17 ms by bot id=123456
+INFO:aiogram.event:Update id=14 is handled. Duration 18 ms by bot id=123456
+INFO:aiogram.event:Update id=15 is handled. Duration 45 ms by bot id=123456
+INFO:aiogram.event:Update id=16 is handled. Duration 15 ms by bot id=123456
+INFO:aiogram.event:Update id=17 is handled. Duration 15 ms by bot id=123456
+INFO:aiogram.event:Update id=18 is handled. Duration 15 ms by bot id=123456
+INFO:aiogram.event:Update id=19 is handled. Duration 15 ms by bot id=123456
+INFO:aiogram.event:Update id=20 is handled. Duration 16 ms by bot id=123456
+WARNING:asyncio:Executing <Task pending name='Task-212' coro=<IsolatedAsyncioTestCase._asyncioLoopRunner() running at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/unittest/async_case.py:101> wait_for=<Future pending cb=[_chain_future.<locals>._call_check_cancel() at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/asyncio/futures.py:385, Task.task_wakeup()] created at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/asyncio/base_events.py:429> created at /workspace/nyambo-audit/python/cpython-3.10-linux-x86_64-gnu/lib/python3.10/unittest/async_case.py:117> took 0.192 seconds
+INFO:aiogram.event:Update id=21 is handled. Duration 258 ms by bot id=123456
+INFO:aiogram.event:Update id=22 is handled. Duration 14 ms by bot id=123456
+INFO:aiogram.event:Update id=23 is handled. Duration 10 ms by bot id=123456
+INFO:aiogram.event:Update id=24 is handled. Duration 9 ms by bot id=123456
+INFO:aiogram.event:Update id=25 is handled. Duration 16 ms by bot id=123456
+INFO:aiogram.event:Update id=26 is handled. Duration 10 ms by bot id=123456
+ok
+test_startup_shutdown_do_not_switch_webhooks (__main__.RuntimeCase) ... INFO:root:Configured webhook verified; no changes made
+INFO:root:Purchase reminder loop started: delay=2.00h
+INFO:root:Purchase reminder loop stopped
+ok
+test_startup_wrong_webhook_rejected_no_change (__main__.RuntimeCase) ... ok
+test_survey_resume_after_storage_restart (__main__.RuntimeCase) ... ok
+test_invalid_payment_fields_all_rejected (__main__.ValidationCase) ... ok
+test_production_admin_numeric_only (__main__.ValidationCase) ... ok
+
+----------------------------------------------------------------------
+Ran 54 tests in 4.675s
+
+OK
+Backup created and SQLite quick_check passed: /tmp/tmpyl3cmp3l/backup
+Code installed. Configuration, database, legal publications and fonts retained. Restart not performed.
+Code rollback completed. Live database and .env retained. Restart not performed.
